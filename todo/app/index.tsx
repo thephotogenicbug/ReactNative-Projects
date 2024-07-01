@@ -13,6 +13,9 @@ import { Stack } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import NewTaskInput from "../components/NewTaskInput";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+import TaskListItem from "@/components/TaskListItem";
 
 export type Task = {
   title: string;
@@ -45,67 +48,78 @@ const dummyTasks: Task[] = [
 const index = () => {
   const [tasks, setTasks] = useState<Task[]>(dummyTasks);
   const [newTask, setNewTask] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTasks = tasks.filter((task) => {
+    if (!searchQuery) {
+      return true;
+    }
+    return task.title
+      .toLowerCase()
+      .trim()
+      .includes(searchQuery.toLowerCase().trim());
+  });
 
   const onItemPressed = (index: number) => {
     setTasks((currentTasks) => {
       const updatedTask = [...currentTasks];
-      currentTasks[index].isFinished = !updatedTask[index].isFinished;
+      updatedTask[index].isFinished = !updatedTask[index].isFinished;
       console.log(updatedTask);
 
       return updatedTask;
     });
   };
 
+  const deleteTask = (index: number) => {
+    setTasks((currentTasks) => {
+      const updatedTask = [...currentTasks];
+      updatedTask.splice(index, 1);
+      return updatedTask;
+    });
+  };
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={100}
-    >
-      <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView>
-        <FlatList
-          data={tasks}
-          contentContainerStyle={{ gap: 5, padding: 10 }}
-          renderItem={({ item, index }) => (
-            <>
-              <Pressable
-                onPress={() => onItemPressed(index)}
-                style={styles.taskContainer}
-              >
-                <MaterialCommunityIcons
-                  name={
-                    item.isFinished
-                      ? "checkbox-marked-circle-outline"
-                      : "checkbox-blank-circle-outline"
-                  }
-                  size={24}
-                  color="dimgray"
-                />
-                <Text
-                  style={[
-                    styles.taskTitle,
-                    {
-                      textDecorationLine: item.isFinished
-                        ? "line-through"
-                        : "none",
-                    },
-                  ]}
-                >
-                  {item.title}
-                </Text>
-              </Pressable>
-            </>
-          )}
-          ListFooterComponent={() => (
-            <NewTaskInput
-              onAdd={(newTodo: Task) =>
-                setTasks((currentTasks) => [...currentTasks, newTodo])
-              }
-            />
-          )}
+    <GestureHandlerRootView>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={900}
+      >
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: "TODO",
+            headerBackTitleVisible: false,
+            headerSearchBarOptions: {
+              hideWhenScrolling: true,
+              onChangeText: (e) => setSearchQuery(e.nativeEvent.text),
+            },
+          }}
         />
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+        <SafeAreaView>
+          <FlatList
+            data={filteredTasks}
+            contentContainerStyle={{ gap: 5, padding: 10 }}
+            keyExtractor={(item) => item.title}
+            renderItem={({ item, index }) => (
+              <>
+                <TaskListItem
+                  task={item}
+                  onItemPressed={() => onItemPressed(index)}
+                  onDelete={() => deleteTask(index)}
+                />
+              </>
+            )}
+            ListFooterComponent={() => (
+              <NewTaskInput
+                onAdd={(newTodo: Task) =>
+                  setTasks((currentTasks) => [...currentTasks, newTodo])
+                }
+              />
+            )}
+          />
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -114,20 +128,6 @@ export default index;
 const styles = StyleSheet.create({
   page: {
     backgroundColor: "white",
-    flex: 1,
-  },
-  taskContainer: {
-    padding: 10,
-    // borderWidth: 1,
-    // borderColor: "gray",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  taskTitle: {
-    fontFamily: "InterSemi",
-    fontSize: 16,
-    color: "dimgray",
     flex: 1,
   },
 });
